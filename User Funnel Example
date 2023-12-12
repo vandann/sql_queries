@@ -1,0 +1,143 @@
+WITH 
+
+-- 1) queries that store general information locally
+users_local AS (
+    SELECT 
+        id as indiv_id
+        , session_count
+        , total_sign_in
+        , language_es
+    FROM users 
+    WHERE {{date_range}}
+    AND type_user = 'person'
+)
+, connections_t_local AS (
+    SELECT indiv_id FROM connections_t
+)
+, events_local AS (
+    SELECT 
+        name 
+        , user_id
+    FROM events_table
+)
+-- 2) queries for each event in person journey
+, person_app_accepted AS (
+    SELECT 
+        1 as index
+        , 'person_app_accepted' as state
+        , count(*) as num
+    FROM users_local
+)
+, person_log_in AS (
+    SELECT 
+        2 as index
+        , 'person_log_in' as state
+        , count(*) as num
+    FROM users_local
+    WHERE total_sign_in > 0
+)
+, person_completed_profile AS (
+    SELECT 
+        3 as index
+        , 'person_completed_profile' as state
+        , count(*) as num
+    FROM users_local
+    WHERE total_sign_in > 0
+    and language_es is not null
+)
+, person_viewed_student_queue AS (
+    SElECT 
+        4 as index 
+        , 'person_viewed_student_queue' as state
+        , COUNT(distinct user_id) as num
+    FROM events_local
+    WHERE name = 'person visited the index page'
+    AND user_id in (SELECT indiv_id FROM users_local)
+)
+, person_connections AS (
+    SELECT 
+        5 as index 
+        , 'person_connections' as state
+        , count(*) as num
+    FROM users_local
+    WHERE indiv_id in (SELECT * FROM connections_t_local)
+        AND total_sign_in > 0
+
+)
+, messaged_student AS (
+    SELECT 
+        6 as index 
+        , 'messaged_student' as state 
+        , COUNT(distinct user_id) as num
+    FROM events_local
+    WHERE name LIKE 'conversations%'
+    AND user_id IN (SELECT indiv_id FROM users_local)
+)
+, users_events AS (
+    SELECT
+        7 as index
+        , 'person_events' as state
+        , count(distinct u.indiv_id)
+    FROM users_local as u
+    INNER JOIN connections_t AS tc
+        ON tc.indiv_id = u.indiv_id
+    INNER JOIN events as e
+        ON e.personing_connection_id = tc.id
+    WHERE u.indiv_id in (SELECT * FROM connections_t_local)
+        AND total_sign_in > 0
+)
+-- new ALTERNATIVE 'converted' query    
+/*
+, users_converted AS (
+    SELECT 
+        8 as index
+        , 'users_converted' as state
+        , COUNT(distinct s.indiv_id) as num
+    FROM users_local AS s
+        INNER JOIN person_session_users AS tsu
+            ON tsu.user_id = s.indiv_id
+        INNER JOIN person_sessions AS ts
+            ON tsu.person_session_id = ts.id
+    WHERE {{snippet: session_length_not_zero__WHERE__official}}
+        AND s.indiv_id IN (SELECT * FROM connections_t_local)
+)
+*/
+, users_converted AS (
+    SELECT 
+        8 as index
+        , 'users_converted' as state
+        , COUNT(*) as num
+    FROM users_local
+    WHERE session_count >= 1
+        AND indiv_id IN (SELECT * FROM connections_t_local)
+)
+, users_more_than_3_sessions AS (
+    SELECT 
+        9 as index
+        , 'users_more_than_3_sessions' as state
+        , COUNT(*) as num
+    FROM users_local
+    WHERE session_count >= 3
+    AND indiv_id IN (SELECT * FROM connections_t_local)
+)
+, final AS (
+    SELECT * FROM person_app_accepted 
+    UNION ALL (SELECT * FROM person_log_in)
+    UNION ALL (SELECT * FROM person_completed_profile)
+    UNION ALL (SELECT * FROM person_viewed_student_queue)
+    UNION ALL (SELECT * FROM person_connections)
+    UNION ALL (SELECT * FROM messaged_student)
+    UNION ALL (SELECT * FROM users_events)
+    UNION ALL (SELECT * FROM users_converted)
+    UNION ALL (SELECT * FROM users_more_than_3_sessions)
+)
+
+SELECT 
+    f1.state 
+    , f1.num as number_of_users
+    , abs(((f1.num - f2.num) * 1.0) / f2.num * 100) as percent_change
+    , abs(((f1.num) * 1.0) / max(f1.num) over(order by 1)) * 100 as percent_change_total
+FROM
+    final as f1 
+    LEFT JOIN final as f2 
+        ON f1.index =  f2.index + 1

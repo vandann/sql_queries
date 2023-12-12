@@ -16,11 +16,11 @@ users_local AS (
 , connections_t_local AS (
     SELECT indiv_id FROM connections_t
 )
-, ahoy_local AS (
+, events_local AS (
     SELECT 
         name 
         , user_id
-    FROM ahoy_events
+    FROM events_table
 )
 -- 2) queries for each event in person journey
 , person_app_accepted AS (
@@ -52,7 +52,7 @@ users_local AS (
         4 as index 
         , 'person_viewed_student_queue' as state
         , COUNT(distinct user_id) as num
-    FROM ahoy_local
+    FROM events_local
     WHERE name = 'person visited the index page'
     AND user_id in (SELECT indiv_id FROM users_local)
 )
@@ -71,7 +71,7 @@ users_local AS (
         6 as index 
         , 'messaged_student' as state 
         , COUNT(distinct user_id) as num
-    FROM ahoy_local
+    FROM events_local
     WHERE name LIKE 'conversations%'
     AND user_id IN (SELECT indiv_id FROM users_local)
 )

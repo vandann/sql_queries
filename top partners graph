@@ -1,0 +1,34 @@
+-- shows top 10 partners given any date picker selection
+
+WITH src AS (
+    SELECT 
+        p.id,
+        p.name as partner,
+        DATE_TRUNC('month', ts.timestamp) as ms,
+        0.5 * (({{snippet: official_duration}} * 2)::INTEGER) as duration
+
+    
+    FROM users as u
+    INNER JOIN partners as p
+        ON u.partner_id = p.id
+    INNER JOIN tsu
+        ON tsu.user_id = u.id
+    INNER JOIN ts 
+        ON tsu.sesh_num = ts.id
+        
+    WHERE u.type = 'person'
+        AND {{selected_month}}
+    GROUP BY 1, 2, 3
+    
+),
+
+partner_rankings as (
+    SELECT 
+        *,
+        ROW_NUMBER() OVER(partition by ms ORDER BY duration DESC) as rank
+    FROM src
+)
+
+SELECT * from partner_rankings
+WHERE rank <= 10 
+    AND duration > 0

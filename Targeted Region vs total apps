@@ -1,0 +1,15 @@
+-- shows what applications are coming from a specific region
+WITH
+src AS (
+    SELECT * 
+    FROM applications 
+    WHERE {{start_date}}
+)
+
+SELECT date_trunc('week', src.date) as week,
+       sum(case when av.region <> 'XYZ' then 1 else 0 end) as not_target,
+       sum(case when av.region = 'XYZ' then 1 else 0 end) as goal_group
+FROM src
+LEFT JOIN site_visits av ON src.site_visit_id = av.id
+GROUP BY 1
+ORDER BY 1;

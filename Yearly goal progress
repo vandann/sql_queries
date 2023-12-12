@@ -1,0 +1,24 @@
+-- Shows a progress bar based on each incrimental monthly goal.
+
+SELECT 
+        COUNT(*) as submissions,
+        (
+          CASE
+            WHEN CURRENT_DATE <= '2023-01-31' THEN 897
+            WHEN CURRENT_DATE <= '2023-02-28' THEN 897 + 1202
+            WHEN CURRENT_DATE <= '2023-03-31' THEN 897 + 1202 + 1181
+            WHEN CURRENT_DATE <= '2023-04-30' THEN 897 + 1202 + 1181 + 943
+            WHEN CURRENT_DATE <= '2023-05-31' THEN 897 + 1202 + 1181 + 943 + 898
+            WHEN CURRENT_DATE <= '2023-06-30' THEN 897 + 1202 + 1181 + 943 + 898 + 720
+            WHEN CURRENT_DATE <= '2023-07-31' THEN 897 + 1202 + 1181 + 943 + 898 + 720 + 687
+            WHEN CURRENT_DATE <= '2023-08-31' THEN 897 + 1202 + 1181 + 943 + 898 + 720 + 687 + 1213
+            WHEN CURRENT_DATE <= '2023-09-30' THEN 897 + 1202 + 1181 + 943 + 898 + 720 + 687 + 1213 + 1797
+            WHEN CURRENT_DATE <= '2023-10-31' THEN 897 + 1202 + 1181 + 943 + 898 + 720 + 687 + 1213 + 1797 + 2358
+            WHEN CURRENT_DATE <= '2023-11-30' THEN 897 + 1202 + 1181 + 943 + 898 + 720 + 687 + 1213 + 1797 + 2358 + 1800
+            WHEN CURRENT_DATE <= '2023-12-31' THEN 897 + 1202 + 1181 + 943 + 898 + 720 + 687 + 1213 + 1797 + 2358 + 1800 + 1307
+          END
+        ) as cumulative_goal
+FROM
+        submissions_table
+WHERE
+        created_at >= '2023-01-01'

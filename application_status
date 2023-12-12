@@ -1,0 +1,14 @@
+ WITH app_src AS (
+    SELECT 
+        *
+    FROM applications
+    WHERE {{date_range}} --this is a date picker field
+ )
+
+select date_trunc('month', submission_date::date) AS month,
+      sum(case when status = 'approved' then 1 else 0 end) as approved,
+      sum(case when status = 'denied' then 1 else 0 end) as denied,
+      sum(case when status = 'applied' then 1 else 0 end) as applied,
+      sum(case when status = 'missing_content' then 1 else 0 end) as missing_content
+from app_src
+group by 1;
